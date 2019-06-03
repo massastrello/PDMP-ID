@@ -33,7 +33,7 @@ class LinearSystem(System):
 
     def trajectory(self, x0, length, steps):
         t = torch.linspace(0, length, steps)
-        return odeint(self, t, x0)
+        return odeint(self, x0, t)
 
 
 
@@ -97,7 +97,7 @@ class LinearStochasticSystem(LinearSystem):
         t = torch.linspace(0, length/steps, 2)
         traj = [x0]
         for i in range(steps):
-            x0 = odeint(self, t, x0)
+            x0 = odeint(self, x0, t)
             x0 = x0[-1]
             x0 = self.jump(x0, i/length)
             traj.append(x0)
