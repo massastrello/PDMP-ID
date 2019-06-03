@@ -9,10 +9,8 @@ class System(object):
     def __init__(self, *args, **kwargs):
         pass
 
-
     def __call__(self, t, xi):
         pass
-
 
     def trajectory(self, length):
         pass
@@ -25,11 +23,9 @@ class LinearSystem(System):
         self.k = kwargs['k']
         self.b = kwargs['b']
 
-
     def __call__(self, t, xi):
         n = xi.size()[0]//2
         return torch.cat((xi[n:], -self.k*xi[:n] -self.b*xi[n:]), 0)
-
 
     def trajectory(self, x0, length, steps):
         t = torch.linspace(0, length, steps)
@@ -125,14 +121,11 @@ class pSGLD(System):
         self.beta1 = beta1
         self.grad2 = np.zeros(D)
 
-
     def __call__(self, t, xi):
         pass
 
-
     def reset_preconditioner(self):
         self.grad2 = np.zeros(self.D)
-
 
     def update(self, g):
         self.grad2 = g * g * (1 - self.beta1) + self.beta1 * self.grad2
