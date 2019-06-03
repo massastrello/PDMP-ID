@@ -43,6 +43,7 @@ class LinearStochasticSystem(LinearSystem):
         super().__init__(*args, **kwargs)
         # parameters for time dependent exponential distribution, probability to jump
         self.lambd = kwargs['lambd']
+        self.last_jump = 0
 
         # parameters for spatial multivariate gaussian, probability to jump
         self.mu_jump = kwargs['mu_jump']
@@ -71,18 +72,24 @@ class LinearStochasticSystem(LinearSystem):
         # spatial multivariate gaussian
         m_gauss = MultivariateNormal(self.mu_jump * torch.ones(n), self.std_jump * torch.eye(n))
         # poisson process, probability of arrival at time t
-        exp_p = 1 - torch.exp(Exponential(self.lambd).log_prob(t))
-        # probabilities of independent samples multiplied together
-        p = torch.exp(m_gauss.log_prob(xi)) * exp_p
+        exp_d = Exponential(self.lambd)
+        # independent events, mult probabilities
+        p = torch.exp(m_gauss.log_prob(xi)) * (1 - torch.exp(exp_d.log_prob(self.last_jump)))
 
         # one sample from bernoulli trial
         event = Bernoulli(p).sample([1])
+
         if event:
             coord_before = xi
             xi = self.jump_event(xi, t)  # flatten resulting sampled location
             coord_after = xi
             # saving jump coordinate info
             self.log_jump(t, coord_before, coord_after)
+
+            self.last_jump = 0
+        # if no jump, increase counter for bern trial
+        else: self.last_jump += 1
+
         return xi
 
 
@@ -99,7 +106,7 @@ class LinearStochasticSystem(LinearSystem):
         for i in range(steps):
             x0 = odeint(self, x0, t)
             x0 = x0[-1]
-            x0 = self.jump(x0, i/length)
+            x0 = self.jump(x0, i)
             traj.append(x0)
         return torch.stack(traj, 0)
 
