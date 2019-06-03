@@ -99,9 +99,7 @@ class LinearStochasticSystem(LinearSystem):
         for i in range(steps):
             x0 = odeint(self, t, x0)
             x0 = x0[-1]
-            print(x0)
             x0 = self.jump(x0, i/length)
-            print(x0)
             traj.append(x0)
         return torch.stack(traj, 0)
 
