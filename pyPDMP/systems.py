@@ -9,7 +9,12 @@ class System(object):
     def __init__(self, *args, **kwargs):
         pass
 
+
     def __call__(self, t, xi):
+        pass
+
+
+    def trajectory(self, length):
         pass
 
 
@@ -20,9 +25,16 @@ class LinearSystem(System):
         self.k = kwargs['k']
         self.b = kwargs['b']
 
+
     def __call__(self, t, xi):
         n = xi.size()[0]//2
         return torch.cat((xi[n:], -self.k*xi[:n] -self.b*xi[n:]), 0)
+
+
+    def trajectory(self, x0, length, steps):
+        t = torch.linspace(0, length, steps)
+        return odeint(self, t, x0)
+
 
 
 
@@ -43,10 +55,21 @@ class LinearStochasticSystem(LinearSystem):
         self.jcount = 0
         self.log = []
 
+
     def __call__(self, t, xi):
+        # perform regular step
+        return super().__call__(t, xi)
+
+
+    def log_jump(self, t, coord_before, coord_after):
+        self.jcount += 1
+        self.log.append([t, coord_before, coord_after])
+
+
+    def jump(self, xi, t):
         n = xi.size(0)
         # spatial multivariate gaussian
-        m_gauss = MultivariateNormal(self.mu_jump*torch.ones(n), self.std_jump*torch.eye(n))
+        m_gauss = MultivariateNormal(self.mu_jump * torch.ones(n), self.std_jump * torch.eye(n))
         # poisson process, probability of arrival at time t
         exp_p = 1 - torch.exp(Exponential(self.lambd).log_prob(t))
         # probabilities of independent samples multiplied together
@@ -56,25 +79,33 @@ class LinearStochasticSystem(LinearSystem):
         event = Bernoulli(p).sample([1])
         if event:
             coord_before = xi
-            xi = self.jump(xi, t) # flatten resulting sampled location
+            xi = self.jump(xi, t)  # flatten resulting sampled location
             coord_after = xi
-
             # saving jump coordinate info
             self.log_jump(t, coord_before, coord_after)
+        return xi
 
-        # perform regular step
-        print(xi)
-        return super().__call__(t, xi)
 
-    def log_jump(self, t, coord_before, coord_after):
-        self.jcount += 1
-        self.log.append([t, coord_before, coord_after])
-
-    def jump(self, xi, t):
+    def jump_event(self, xi, t):
         mu = xi + torch.rand(xi.shape)
         std_s = self.std_s*torch.ones(xi.shape)
         # sample one location from spatial jump distribution
         return MultivariateNormal(mu, std_s*torch.eye(xi.size(0))).sample([1]).flatten()
+
+
+    def trajectory(self, x0, length, steps):
+        t = torch.linspace(0, length/steps, 2)
+        traj = [x0]
+        for i in range(steps):
+            x0 = odeint(self, t, x0)
+            x0 = x0[-1]
+            print(x0)
+            x0 = self.jump(x0, i/length)
+            print(x0)
+            traj.append(x0)
+            print(i)
+        return torch.stack(traj, 0)
+
 
 
 class pSGLD(System):
@@ -90,11 +121,14 @@ class pSGLD(System):
         self.beta1 = beta1
         self.grad2 = np.zeros(D)
 
+
     def __call__(self, t, xi):
         pass
 
+
     def reset_preconditioner(self):
         self.grad2 = np.zeros(self.D)
+
 
     def update(self, g):
         self.grad2 = g * g * (1 - self.beta1) + self.beta1 * self.grad2
@@ -103,15 +137,24 @@ class pSGLD(System):
             self.stepsize * 2 / self.N * preconditioner) * np.random.randn(len(g))
 
 
+
 if __name__ == "__main__":
     print('Simple test:')
-    t = torch.linspace(0, 10, 2000)
+    t = torch.linspace(0, 10, 200)
     x0 = torch.rand(10)
     m = LinearSystem(k=2, b=2)
     sol = odeint(m, x0, t)
     #print(sol)
-    m = LinearStochasticSystem(k=2, b=2, lambd=0.4, mu_jump=0.3, std_jump=0.2, std_s=5)
+    m = LinearStochasticSystem(k=2, b=2, lambd=0.4, mu_jump=0.3, std_jump=1, std_s=5)
     x0 = torch.rand(10)
-    sol = odeint(m, x0, t)
+
+    #sol = odeint(m, x0, t)
     #print(sol)
     #print(m.log)
+
+    m = LinearStochasticSystem(k=2, b=2, lambd=0.4, mu_jump=0.3, std_jump=1, std_s=5)
+    x0 = torch.rand(2)
+
+    sol = m.trajectory(x0, 10, 100)
+    print(sol)
+
