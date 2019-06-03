@@ -79,7 +79,7 @@ class LinearStochasticSystem(LinearSystem):
         event = Bernoulli(p).sample([1])
         if event:
             coord_before = xi
-            xi = self.jump(xi, t)  # flatten resulting sampled location
+            xi = self.jump_event(xi, t)  # flatten resulting sampled location
             coord_after = xi
             # saving jump coordinate info
             self.log_jump(t, coord_before, coord_after)
@@ -103,7 +103,6 @@ class LinearStochasticSystem(LinearSystem):
             x0 = self.jump(x0, i/length)
             print(x0)
             traj.append(x0)
-            print(i)
         return torch.stack(traj, 0)
 
 
