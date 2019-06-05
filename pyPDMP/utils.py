@@ -43,7 +43,7 @@ def jump(x,t):
     return np.random.multivariate_normal(mu[0],Sigma)
 
 # Hybrid Sys. Solver
-def HDSint(max_events, t, fun, x0, mu, Sigma):
+def HDSint(max_events, t, fun, x0, mu, Sigma, tau):
     event_counter = 0
     x_tot = [0,0,0]
     x_event = [0,0,0]
@@ -54,7 +54,7 @@ def HDSint(max_events, t, fun, x0, mu, Sigma):
     while event_counter<max_events:
         sol = odeint(fun,x0,t)
         for i in range(len(sol)):
-            P = multivariate_normal.pdf(sol[i],mu,Sigma)*CumExpDist(t[i],0.4)
+            P = multivariate_normal.pdf(sol[i],mu,Sigma)*CumExpDist(t[i],tau)
             Event = np.random.binomial(1,P)
             if Event:
                 flag = 1;
