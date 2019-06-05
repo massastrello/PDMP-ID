@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 import pandas as pd
 import seaborn as sns
+import torch.nn.functional as F
 
 def arrivalTimePoisson(lambd, t):
     return 1 - torch.exp(-lambd*t)
