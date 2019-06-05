@@ -115,11 +115,11 @@ class MLP(torch.nn.Module):
 
 class VAE(nn.Module):
     def __init__(self,
-                 i=1,
+                 i=784,
                  lec=400,
                  lds=20,
                  ldec=400,
-                 out=1,
+                 out=784,
                  ):
         '''
         :param in: input shape
