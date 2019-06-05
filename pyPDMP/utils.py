@@ -8,7 +8,7 @@ import pandas as pd
 import seaborn as sns
 
 def arrivalTimePoisson(lambd, t):
-    return 1 - torch.exp(lambd*t)
+    return 1 - torch.exp(-lambd*t)
 
 @pysnooper.snoop()
 def buildDataset(system, initial_conds, length, steps):
@@ -23,6 +23,7 @@ def buildDataset(system, initial_conds, length, steps):
 # Distributions
 def CumExpDist(t,tau):
     return 1 - np.exp(-tau*t)
+
 def SpatialExpDist(x,tau):
     return 1- np.exp(-tau*np.linalg.norm(x))
 
@@ -33,7 +34,7 @@ def jump(x,t):
     return np.random.multivariate_normal(mu[0],Sigma)
 
 # Hybrid Sys. Solver
-def HDSint(max_events,t,fun,x0,mu,Sigma):
+def HDSint(max_events, t, fun, x0, mu, Sigma):
     event_counter = 0
     x_tot = [0,0,0]
     x_event = [0,0,0]
@@ -74,3 +75,16 @@ def thin_flow_samples(C,N):
     perm = torch.randperm(tensor.size(0))
     idx = perm[:N]
     return tensor[idx].numpy()
+
+
+# Reconstruction + KL divergence losses summed over all elements and batch
+def loss_function(recon_x, x, mu, logvar):
+    BCE = F.binary_cross_entropy(recon_x, x.view(-1, 784), reduction='sum')
+
+    # see Appendix B from VAE paper:
+    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
+    # https://arxiv.org/abs/1312.6114
+    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+
+    return BCE + KLD
