@@ -11,14 +11,22 @@ import torch.nn.functional as F
 def arrivalTimePoisson(lambd, t):
     return 1 - torch.exp(-lambd*t)
 
-@pysnooper.snoop()
+
 def buildDataset(system, initial_conds, length, steps):
-    # TO DO: bugged -__-
+    '''
+    Builds a dataset of jump and flow points:
+    [st
+    :param system:
+    :param initial_conds:
+    :param length:
+    :param steps:
+    :return:
+    '''
     dataset = []
     for x0 in initial_conds:
         sol = system.trajectory(x0, length, steps)
-        dataset.append([torch.stack((el.view(-1), torch.zeros(0)), 1) for el in sol])
-    dataset.append(torch.stack((el[2].view(-1), torch.ones(1)), 1) for el in system.log)
+        dataset.append([torch.cat((el.view(-1), torch.zeros(1)), 0) for el in sol])
+    dataset.append(torch.cat((el[2].view(-1), torch.ones(1)), 0) for el in system.log)
     return dataset
 
 # Distributions
@@ -79,8 +87,8 @@ def thin_flow_samples(C,N):
 
 
 # Reconstruction + KL divergence losses summed over all elements and batch
-def loss_function(recon_x, x, mu, logvar):
-    BCE = F.binary_cross_entropy(recon_x, x.view(-1, 784), reduction='sum')
+def loss_function(recon_x, x, mu, logvar, size):
+    BCE = F.binary_cross_entropy(recon_x, x.view(-1, size), reduction='sum')
 
     # see Appendix B from VAE paper:
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
