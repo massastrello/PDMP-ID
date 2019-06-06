@@ -131,7 +131,7 @@ class VAE(nn.Module):
         '''
         super(VAE, self).__init__()
         # input size
-        self.i = i
+        self.i = igb
 
         self.fc1 = nn.Linear(i, lec)
         self.fc21 = nn.Linear(lec, lds)
