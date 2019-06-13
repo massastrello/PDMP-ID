@@ -77,6 +77,40 @@ def HDSint(max_events, t, fun, x0, mu, Sigma, tau):
             print((100*event_counter)/max_events)
     return t_tot, x_tot[1:], x_event[1:], x_reset[1:], C[1:]
 
+def HDSint_mod(max_events, t, fun, x0, prob):
+    event_counter = 0
+    x_tot = [0,0,0]
+    x_event = [0,0,0]
+    x_reset = [0,0]
+    C = [0,0,0]
+    t_tot = []
+    print('Progress:')
+    while event_counter<max_events:
+        sol = odeint(fun,x0,t)
+        for i in range(len(sol)):
+            P = prob(torch.tensor(np.hstack((sol[i],t[i]))))
+            Event = np.random.binomial(1,P)
+            if Event:
+                flag = 1;
+                x0 = jump(sol[i],t[i])
+                x_event = np.vstack((x_event,np.hstack((sol[i],t[i]))))
+                x_reset = np.vstack((x_reset,x0))
+                break
+        C = np.vstack((x_tot,np.hstack((sol[:i-1],t[:i-1].reshape(i-1,1)))))
+        x_tot = np.vstack((x_tot,np.hstack((sol[:i],t[:i].reshape(i,1)))))
+        if event_counter==0:
+            t_tot = np.hstack((t_tot,t[:i])) 
+        else:
+            t_tot = np.hstack((t_tot,t[:i]+t_tot[-1]))
+        if flag:
+            flag = 0
+            event_counter += 1
+        else:
+            x0 = sol[-1]
+        if (100*event_counter)%(max_events*25)==0:
+            print((100*event_counter)/max_events)
+    return t_tot, x_tot[1:], x_event[1:], x_reset[1:], C[1:]
+
 
 # "Sfoltisce" the flow data randomly
 def thin_flow_samples(C,N):
