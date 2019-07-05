@@ -20,3 +20,5 @@ In your IDE or notebook of choice:
 ```
 import pyPDMP
 ```
+
+https://github.com/fastai/fastai/blob/master/courses/dl2/style-transfer.ipynb
